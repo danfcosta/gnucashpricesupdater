@@ -1,16 +1,19 @@
 import requests
 import pandas
+import settings
 
 class FundsFileMng:
-    url = 'http://dados.cvm.gov.br/dados/FI/DOC/INF_DIARIO/DADOS/inf_diario_fi_YYYYMM.csv'
+    url = settings.cvm_funds_url
+    __csvDf = None
 
-    def downloadFile(self, period):
-        url = self.url.replace('YYYYMM',period)
-
+    def loadFile(self, period):
+        url = self.url.replace('{YYYYMM}',period)
+        print('Requesting URL: ' + url)
         if requests.head(url).status_code == 200:
-            return pandas.read_csv(url, delimiter=';')
-        
-        return None
+            self.__csvDf = pandas.read_csv(url, delimiter=';')
+            return True
+        else:
+            return False
 
-    def getQuotesByCnpjDate(self, quotesDF, cnpj, date):
-        return quotesDF[(quotesDF['CNPJ_FUNDO'] == cnpj) & (quotesDF['DT_COMPTC'] == date)]
+    def getQuotesByCnpjDate(self, cnpj, date):
+        return self.__csvDf[(self.__csvDf['CNPJ_FUNDO'] == cnpj) & (self.__csvDf['DT_COMPTC'] == date)]
