@@ -11,11 +11,14 @@ class GnuCashConn:
     def createConn(self):
         return sqlite3.connect(self.database_path)
     
-    def getCommodities(self):
+    #data in format YYYYMMDD
+    def getCommodities(self, date):
         conn = self.createConn()
         with conn:
             cur = conn.cursor()
-            cur.execute("select guid, namespace, mnemonic, fullname from commodities")
+            #cur.execute("select guid, namespace, mnemonic, fullname from commodities where quote_flag = 1")
+            #select c.namespace, c.mnemonic, sum(1.00 * s.quantity_num / s.quantity_denom)
+            cur.execute("select c.guid, c.namespace, c.mnemonic, c.fullname from splits s inner join transactions t ON (s.tx_guid = t.guid) inner join accounts a ON (s.account_guid = a.guid) inner join commodities c on (c.guid = a.commodity_guid) where c.quote_flag = 1 and cast(substr(replace(replace(replace(post_date, '-', ''), ':', ''), ' ', ''), 1, 8) as integer) <= ? group by c.guid, c.namespace, c.mnemonic, c.fullname having sum(1.00 * s.quantity_num / s.quantity_denom) <> 0", (date,))
             return cur.fetchall()
 
     def getBrasilianCurrencyGuid(self):
@@ -63,12 +66,12 @@ class GnuCashConn:
                 #update
                 if(len(tempPrice) == 1):
                     self.__updatePrice(conn, tempPrice[0][0], p.value, p.denom)
-                    print(p.commodity_fullName + ' - update')
+                    print('[\033[33mU\033[0m] ' + p.commodity_fullName)
                 
                 #insert
                 if len(tempPrice) == 0:
                     self.__insertPrice(conn, p.commodity_guid, p.currency_guid, p.date, p.value, p.denom)
-                    print(p.commodity_fullName + ' - insert')
+                    print('[\033[34mI\033[0m] ' + p.commodity_fullName)
 
 
 class GnuCashPrice:

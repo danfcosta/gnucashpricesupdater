@@ -14,7 +14,7 @@ class StockQuotes:
 
     def __getFileName(self, date):
         period = date.replace('-','')[4:6] + date.replace('-','')[0:4]
-        return self.__fileNameBase.replace('{PERIODO}', period)
+        return self.__fileNameBase.replace('{MMYYYY}', period)
 
     def __getFileData(self, date):
         fileName = settings.app_files_dir + self.__getFileName(date)
