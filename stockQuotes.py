@@ -50,7 +50,12 @@ class StockQuotes:
         with ZipFile(fileName, 'r') as zipObj:
             zipObj.extractall(settings.app_files_dir)
 
-        df = pandas.read_fwf(fileName.replace('ZIP','TXT'), names=['type', 'date', 'stock', 'price'], header=None, colspecs=[(0,2), (2,10), (12,24), (109,121)])
+        # LAYOUT DO ARQUIVO DE COTACOES HISTORICAS
+        # http://www.b3.com.br/data/files/C8/F3/08/B4/297BE410F816C9E492D828A8/SeriesHistoricas_Layout.pdf
+        # PDF mostra a posicao inicial de cada campo com base 1 e intervalo [inicio,fim]  (inclui fim)
+        # Python usa a posicao inicial dos campos com base 0 e intervalo [inicio,fim)  (nao inclui fim)
+        
+        df = pandas.read_fwf(fileName.replace('ZIP','TXT'), names=['type', 'date', 'stock', 'price'], header=None, colspecs=[(0,2), (2,10), (12,24), (108,121)])
         df['price'] = df['price'].map(lambda price: price / 100)
         return df
 
