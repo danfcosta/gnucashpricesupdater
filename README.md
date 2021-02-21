@@ -14,38 +14,27 @@ Premissa: arquivo do GnuCash deve estar salvo no formato SQLite (o padrão é XM
 
 No GnuCash, informar os seguintes dados:
 -  Fundos de Investimento:
-  - Agrupamentos: FUNDO RF, FUNDO MULTI ou PREVIDENCIA
+  - Agrupamentos pré-configurados: FUNDO RF, FUNDO MULTI ou PREVIDENCIA (ver aquivo *settings.py*)
   - Informar o CNPJ (formatado 00.000.000/0000-00)
  - Ações, FIIs de mais ativos negociado na B3:
-   - Agrupamento: ACAO
+   - Agrupamento pré-configurados: ACAO, OPCAO, FII (ver aquivo *settings.py*)
    - Informar o ticker do ativo. Ex: PETR4
    
 ### Configuração da aplicação
 
-Configurações devem ser definidas no arquivo settings:
-
-```
-#app configuration
-app_files_dir = './files/'
-gnucash_database_path = "/caminho/para/arquivo.gnucash"
-```
+Configurações devem ser definidas no arquivo *settings.py*:
 
 ### Forma de Uso
-
-Dentro do arquivo *main.py* alterar a variável *date* para o valor desejado. (caso deseje, pode ser alterado para receber o valor da linha de comando)
-
-```
-date = 'YYYY-MM-DD'
-```
-Esse é o único dado de entrada do usuário e não há qualquer tratamento/validação sobre ele. Informar o valor correto!
 
 ```
 python main.py
 ```
 
+Será solicitada data da cotação. Deve ser informado no formato YYYY-MM-DD.
+
 ### Importante
 
-No momento, a sequencia é de download do arquivo da CVM e depois da B3. Não coloquei opção de ativas/desativar um ou outro.
+No momento, a sequencia é de download do arquivo da CVM e depois da B3. Não coloquei opção de ativar/desativar um ou outro.
 
 ### Saída
 
