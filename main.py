@@ -1,59 +1,61 @@
-import pandas
-import sqlite3
-import settings
-from gnucashConn import GnuCashConn
-from gnucashConn import GnuCashPrice
-from fundsFileMng import FundsFileMng
-from stockQuotes import StockQuotes
+import os
+import zipfile
+from datetime import datetime
 
-#date = '2020-12-30'
-date = input('Data de final de mes (YYYY-MM-DD): ')
+import config
+import download_handler
+from b3_file_handler import B3FileHandler
+from cvm_file_handler import CVMFileHandler
+from tesouro_file_handler import TesouroFileHandler
+#from custom_assets_file_handler import CustomAssetsFileHandler
+from gnucash_handler import GnuCashConn
+from gnucash_handler import GnuCashPrice
 
 def numberOfDigits(value):
     return str(value)[::-1].find('.')
 
-period = date.replace('-','')[0:6]
+date = input('Last business day of month (YYYY-MM-DD): ')
+date = datetime.strptime(date, '%Y-%m-%d')
 
-fundsFileMng = FundsFileMng()
-
-if not fundsFileMng.loadFile(period):
-    exit('CVS file not available!')
-
-gc = GnuCashConn()
-stockQuotes = StockQuotes()
+gc = GnuCashConn(config.gnucash_database_path)
+gcCommodities = gc.getCommodities(date.strftime('%Y%m%d'))
+gcCommoditiesList = gcCommodities.iloc[:, 2].tolist()
 
 brazilianCurrencyGuid = gc.getBrasilianCurrencyGuid()
-commodities = gc.getCommodities(date.replace('-',''))
-newPriceList = []
 
-for c in commodities:
-    newPrice = GnuCashPrice()
-    newPrice.commodity_guid = c[0]
-    newPrice.commodity_fullName = c[3]
-    newPrice.currency_guid = brazilianCurrencyGuid
-    newPrice.date = date
+assetPrices = []
 
-    if c[1] in settings.FUNDS:
-        results = fundsFileMng.getQuotesByCnpjDate(c[2], date)
-        if len(results) == 1:
-            price = results['VL_QUOTA'].iloc[0]
-            newPrice.denom = int(10 ** numberOfDigits(price))
-            newPrice.value = int(price * newPrice.denom)
+b3Quotes = B3FileHandler()
+cvmQuotes = CVMFileHandler()
+tesouroQuotes = TesouroFileHandler()
+#customQuotes = CustomAssetsFileHandler()
+
+assetPrices = assetPrices + b3Quotes.getPricesForDate(gcCommoditiesList, date)
+assetPrices = assetPrices + cvmQuotes.getPricesForDate(gcCommoditiesList, date)
+assetPrices = assetPrices + tesouroQuotes.getPricesForDate(gcCommoditiesList, date)
+#assetPrices = assetPrices + customQuotes.getPricesForDate(gcCommoditiesList, date)
+
+newPriceList  = []
+
+for indice, c in gcCommodities.iterrows():
+    for price in assetPrices:
+        if c[2] == price[1]:
+            newPrice = GnuCashPrice()
+            newPrice.commodity_guid = c[0]
+            newPrice.commodity_fullName = c[3]
+            newPrice.currency_guid = brazilianCurrencyGuid
+            newPrice.date = date.strftime('%Y-%m-%d')
+            
+            newPrice.denom = int(10 ** numberOfDigits(price[2]))
+            newPrice.value = int(price[2] * newPrice.denom)
+            
             newPriceList.append(newPrice)
-            print('Price found: ' + newPrice.commodity_fullName)
-        else:
-            print('\33[31mPrice NOT found: ' + newPrice.commodity_fullName)
+            break
 
-    if c[1] in settings.STOCKS:
-        result = stockQuotes.getPriceByDate(c[2], date)
-        if result != None:
-            newPrice.denom = int(10 ** numberOfDigits(result))
-            newPrice.value = int(result * newPrice.denom)
-            newPriceList.append(newPrice)
-            print('Price found: ' + newPrice.commodity_fullName + '\033[0m')
-        else:
-            print('\33[31mPrice NOT found: ' + newPrice.commodity_fullName + '\033[0m')
+gc.savePrices(newPriceList)
 
-
-if len(newPriceList) > 0:
-    gc.savePrices(newPriceList)
+print()
+print("Assets NOT found:")
+assetsNotFound = [item for item in gcCommoditiesList if not any(item == sublista[1] for sublista in assetPrices)]
+for row in assetsNotFound:
+    print("- ", row)
